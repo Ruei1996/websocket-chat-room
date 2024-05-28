@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Chat</title>
+    <script>
+        // Wait for the page to fully load
+        document.addEventListener("DOMContentLoaded", function() {
+            // Connect to the WebSocket server
+            var ws = new WebSocket("ws://localhost:8080/ws");
+
+            // Get references to various elements on the page
+            var chatBox = document.getElementById("chat-box");
+            var sendButton = document.getElementById("send-button");
+            var dumpButton = document.getElementById("dump-button");
+            var messageInput = document.getElementById("message-input");
+            var usernameInput = document.getElementById("username-input");
+
+            // When a message is received from the server, add it to the chat box
+            ws.onmessage = function(event) {
+                var message = JSON.parse(event.data);
+                chatBox.innerHTML += "<p><strong>" + message.username + ":</strong> " + message.content + "</p>";
+            };
+
+            // When the send button is clicked, send the current message to the server
+            sendButton.onclick = function() {
+                var message = {
+                    username: usernameInput.value,
+                    content: messageInput.value
+                };
+                ws.send(JSON.stringify(message));
+                messageInput.value = ""; // Clear the message input
+            };
+
+            // When the dump button is clicked, fetch the chat history from the server
+            dumpButton.onclick = function() {
+                fetch('/dump')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Chat dump successful! Saving chat data...");
+                        console.log("Chat data: ", data.chatHistory);
+                        saveChatData(data.chatHistory); // Save the chat history
+                    });
+            };
+
+            // Function to save the chat history to a server
+            function saveChatData(chatData) {
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", "http://localhost:8000/save_chat", true);
+                xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        console.log("Chat data saved successfully!");
+                        alert("Chat data saved successfully!"); // Show a success message
+                    }
+                };
+                xhr.send(JSON.stringify(chatData)); // Send the chat data
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>WebSocket Chat</h1>
+    <input id="username-input" type="text" placeholder="Username"> <!-- Input for the username -->
+    <input id="message-input" type="text" placeholder="Message"> <!-- Input for the message -->
+    <button id="send-button">Send message</button> <!-- Button to send a message -->
+    <button id="dump-button">Dump all the chat history</button> <!-- Button to dump the chat history -->
+    <div id="chat-box"></div> <!-- The chat box where messages will be displayed -->
+</body>
+</html>
